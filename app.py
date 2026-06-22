@@ -15,7 +15,7 @@ from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision as mp_vision
 
 # --- Model ---
-MODEL_PATH = "hand_landmarker.task"
+MODEL_PATH = "/tmp/hand_landmarker.task"
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
     "hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
