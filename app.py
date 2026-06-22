@@ -10,9 +10,8 @@ import tempfile
 import os
 import requests
 
-import mediapipe as mp
-from mediapipe.tasks import python as mp_tasks
-from mediapipe.tasks.python import vision as mp_vision
+# NOTE: mediapipe is imported lazily inside analyze_video()
+# to avoid crashing at startup if the C library fails to load.
 
 # --- Model ---
 MODEL_PATH = "/tmp/hand_landmarker.task"
@@ -72,6 +71,12 @@ def calc_finger_spread(spreads):
 # --- Video Analysis ---
 
 def analyze_video(video_path, progress_bar=None):
+    # Lazy import mediapipe here so startup does not crash
+    # if the C library has issues on this platform/Python version
+    import mediapipe as mp
+    from mediapipe.tasks import python as mp_tasks
+    from mediapipe.tasks.python import vision as mp_vision
+
     ensure_model()  # download if needed
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
