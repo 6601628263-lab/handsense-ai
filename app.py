@@ -15,16 +15,18 @@ from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision as mp_vision
 
 # --- Model ---
-MODEL_PATH = "/content/hand_landmarker.task"
+MODEL_PATH = "hand_landmarker.task"
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
     "hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
 )
 
 
+@st.cache_resource
 def ensure_model():
     if not os.path.exists(MODEL_PATH):
         urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+    return MODEL_PATH
 
 
 # --- Metric Functions ---
@@ -100,7 +102,7 @@ def analyze_video(video_path, progress_bar=None):
 
             if result.hand_landmarks and result.handedness:
                 for lm_list, handedness_list in zip(result.hand_landmarks, result.handedness):
-                    side = handedness_list[0].category_name  # "Left" or "Right"
+                    side = handedness_list[0].category_name
                     wrist = lm_list[0]
                     data[side]["positions"].append((wrist.x, wrist.y))
                     data[side]["frame_count"] += 1
