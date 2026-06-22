@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import tempfile
 import os
-import urllib.request
+import requests
 
 import mediapipe as mp
 from mediapipe.tasks import python as mp_tasks
@@ -25,7 +25,14 @@ MODEL_URL = (
 @st.cache_resource
 def ensure_model():
     if not os.path.exists(MODEL_PATH):
-        urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+        try:
+            resp = requests.get(MODEL_URL, timeout=120, stream=True)
+            resp.raise_for_status()
+            with open(MODEL_PATH, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=65536):
+                    f.write(chunk)
+        except Exception as exc:
+            raise RuntimeError(f"ดาวน์โหลดโมเดลล้มเหลว: {exc}") from exc
     return MODEL_PATH
 
 
@@ -65,7 +72,7 @@ def calc_finger_spread(spreads):
 # --- Video Analysis ---
 
 def analyze_video(video_path, progress_bar=None):
-    ensure_model()
+    ensure_model()  # download if needed
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -102,7 +109,7 @@ def analyze_video(video_path, progress_bar=None):
 
             if result.hand_landmarks and result.handedness:
                 for lm_list, handedness_list in zip(result.hand_landmarks, result.handedness):
-                    side = handedness_list[0].category_name
+                    side = handedness_list[0].category_name  # "Left" or "Right"
                     wrist = lm_list[0]
                     data[side]["positions"].append((wrist.x, wrist.y))
                     data[side]["frame_count"] += 1
@@ -184,10 +191,14 @@ def main():
     st.divider()
 
     if st.button("วิเคราะห์วิดีโอ", type="primary", use_container_width=True):
-        with st.spinner("กำลังประมวลผล..."):
-            prog = st.progress(0.0, text="กำลังอ่านวิดีโอ...")
-            raw = analyze_video(tmp_path, progress_bar=prog)
-            prog.empty()
+        try:
+            with st.spinner("กำลังประมวลผล..."):
+                prog = st.progress(0.0, text="กำลังอ่านวิดีโอ...")
+                raw = analyze_video(tmp_path, progress_bar=prog)
+                prog.empty()
+        except Exception as exc:
+            st.error(f"เกิดข้อผิดพลาด: {exc}")
+            st.stop()
 
         lm = compute_metrics(raw["Left"])
         rm = compute_metrics(raw["Right"])
